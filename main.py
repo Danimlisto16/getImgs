@@ -3,9 +3,9 @@ import requests
 from bs4 import BeautifulSoup
 from os.path  import basename
 
-def loadProductsfromFile():
+def loadProductsfromFile(productsPath):
   products = []
-  with open("products.txt") as f:
+  with open(productsPath) as f:
     for line in f:
       products.append(line.strip())
   return products
@@ -16,40 +16,51 @@ def checkIfproductHasImage(row):
     return True
   return False
 
-def searchImageOnWebsite(webiste, productName, productBarcode):
-  webProduct  = webiste.replace("keyword", productName)
-  # Send a GET request to the modified URL
-  response = requests.get(webProduct)
-
-    # Check if the request was successful
-  if response.status_code == 200:
-      # Parse the HTML content of the page using BeautifulSoup
-      soup = BeautifulSoup(response.content, 'html.parser')
+def searchImageOnWebsite(website, listPropertiesofProduct):
+  for propertie in listPropertiesofProduct:
+    webProduct  = website.replace("keyword", propertie)
+    # Send a GET request to the modified URL
+    response = requests.get(webProduct)
+      # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the HTML content of the page using BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+          
+        # Implement image search logic here by finding image elements on the page
+        # For example, if images are wrapped in <img> tags, you can find them using:
         
-      # Implement image search logic here by finding image elements on the page
-      # For example, if images are wrapped in <img> tags, you can find them using:
-      images = soup.find_all('img')
-        
-        # Check if any images were found
-      if images:
-          # You can further process the images, extract their URLs, or perform any other necessary action
-          # For now, just return True to indicate that images were found
-          return True
-      else:
-          # If no images were found, return False
+        #FIRST SEARCH FOR NOT FOUND MESSAGES, to continue or not with the search
+        if not checkNotFound(notFoundFile_path, soup):
+            #then proceed to search the image
+          images = soup.find_all('img')    
+            # Check if any images were found
+          if images:
+              # You can further process the images, extract their URLs, or perform any other necessary action
+              
+              return True
+        else:
           return False
-  else:
-    # If the request was not successful, print an error message and return False
-    print("Error: Unable to retrieve data from the website.")
-    return False
-  return True
+    else:
+      # If the request was not successful, print an error message and return False
+      print("Error: Unable to retrieve data from the website.")
+      return False
 
-def checkNotFoundItemsOnWebsite(notFoundAnswersFile_path, websites):
-  
-  return True
+def loadNotFoundMessages(notFoundFile_path):
+  notFoundmsg = []
+  with open(notFoundFile_path) as f:
+    for line in f:
+      notFoundmsg.append(line.strip())
+  return notFoundmsg
 
-def getAndSaveImage(links):
-  for link in links:
+def checkNotFound(notFoundmsg, websites):
+  for msg in notFoundmsg:
+    if msg in websites: #IMPROVE THIS LOGIC
+      return True
+  return False
+
+
+def getAndSaveImage(images,imgName,imgSavePath):
+  for link in images:
     if "http" in link.get('src'):
         lnk = link.get('src')
         with open(basename(lnk), "wb") as f:
@@ -61,7 +72,6 @@ def getWebsites(websitesPath):
     for line in f:
       websites.append(line.strip())
   return websites
-
 
 def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read):
   # Replace 'file_path.xls' with the path to your Excel file
@@ -86,12 +96,22 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read):
 #This function will create a new file from the old file, 
 # with CLOVER ID, NAME, PRODUCT CODE and a new column IMAGE EXIST
 
-columns_to_read = ["Clover ID", "Name", "Product Code"]
-sourceFile = "./Items/Kalinka.xlsx"
-destinationFile = "./Items/New_Kalinka.xlsx"
 
+columns_to_read = ["Clover ID", "Name", "Product Code"]
+sourceFile = "./Items/Kalinka.xlsx" #replace with the path to your file
+destinationFile = "./Items/New_Kalinka.xlsx" #replace with the path to your new file
+
+
+# --------- ONLY RUN THIS FUNCTION ONCE TO CREATE THE NEW FILE ----------
 #createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read)
 
 websitesPath = "./websites/websites.txt"
 websites = getWebsites(websitesPath)
+notFoundmessages = loadNotFoundMessages("./websites/notFound.txt")
+productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
+for product in productsList: #search for image on websites
+  for website in websites:
+    listPropertiesofProduct = [product["Name"], product["Product Code"]]
+    searchImageOnWebsite(website, listPropertiesofProduct)
+    
