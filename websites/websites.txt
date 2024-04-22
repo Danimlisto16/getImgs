@@ -1,8 +1,8 @@
-https://elonamarket.com/search?q=keyword
-https://listex.info/uk/search/?q=keyword&type=goods
-https://cmp24.by/s/?search_query=keyword
-https://euromartstore.us/?product_cat=&s=keyword&post_type=product
-https://www.ebay.com/sch/i.html?_from=R40&_trksid=p2322090.m570.l1313&_nkw=keyword&_sacat=0
-https://produkty24.com.ua/ru/search/?q=keyword
-https://gurmenia.am/en/product/search?searchQuery=keyword
+https://elonamarket.com/search?q=keyword ✔
+https://listex.info/uk/search/?q=keyword&type=goods ✔
+https://cmp24.by/s/?search_query=keyword✔
+https://euromartstore.us/?product_cat=&s=keyword&post_type=product✔
+https://www.ebay.com/sch/i.html?_from=R40&_trksid=p2322090.m570.l1313&_nkw=keyword&_sacat=0✔
+https://produkty24.com.ua/ru/search/?q=keyword✔
+https://gurmenia.am/en/product/search?searchQuery=keyword✔
 https://www.onlinetrade.ru/sitesearch.html?query=keyword
