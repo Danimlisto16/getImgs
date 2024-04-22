@@ -5,15 +5,19 @@ from os.path  import basename
 
 def loadProductsfromFile(productsPath): #DONE
   df = pd.read_excel(productsPath)
-  return df
-
+   # Filter rows where 'IMAGEEXIST' column is not equal to 0
+  filtered_df = df[df['imageExist'] == 0]
+  return filtered_df
+  
 def checkIfproductHasImage(row): #DONE
   product = row["imageExists"]
   if product == 1:
     return True
   return False
 
-def searchImageOnWebsite(website, listPropertiesofProduct, notFoundMessages):
+
+def searchImageOnWebsite(website, product, notFoundMessages):
+  listPropertiesofProduct = [str(product["Name"]), str(product["Product Code"])]
   for propertie in listPropertiesofProduct:
     webProduct  = website.replace("keyword", propertie)
     # Send a GET request to the modified URL
@@ -25,15 +29,24 @@ def searchImageOnWebsite(website, listPropertiesofProduct, notFoundMessages):
         # Implement image search logic here by finding image elements on the page
         # For example, if images are wrapped in <img> tags, you can find them using:
         #FIRST SEARCH FOR NOT FOUND MESSAGES, to continue or not with the search
-        if not checkNotFound(notFoundMessages, soup):
-            #then proceed to search the image
-          images = soup.find_all('img')
+        if not checkNotFound(notFoundMessages, soup):  #IMPROVE THIS CODE TOO
+            
+            #find all images in the page
+            images = soup.find_all('img')
+            
+            #get img links
+            
+            #save 3 images with the barcode name in the Images folder
+            
+            #convert image to webp format
+            
+            #update row in the new_restaurants.xlsx file to imageExists = 1
+            product["imageExists"] = 1
+            
+            #save in the new file
+            
+            
             # Check if any images were found
-          if images:
-              # You can further process the images, extract their URLs, or perform any other necessary action
-              return True
-        else:
-          return False
     else:
       # If the request was not successful, print an error message and return False
       print("Error: Unable to retrieve data from the website.")
@@ -50,22 +63,11 @@ def loadNotFoundMessages(notFoundFile_path): #DONE
   return messages
 
 
-def checkNotFound(notFoundMsgList, websiteURLs):
-    for url in websiteURLs:
-        try:
-            # Fetch the webpage content
-            response = requests.get(url)
-            response.raise_for_status()  # Raise an exception for bad status codes
-            html_content = response.text 
-            # Parse the HTML content using BeautifulSoup
-            soup = BeautifulSoup(html_content, 'html.parser')
-            # Find if the notFoundMsg exists in the webpage
-            for msg in notFoundMsgList:
-              if soup.find(text=msg):
-                return True
-        except Exception as e:
-            # Handle exceptions like connection errors, invalid URLs, etc.
-            print(f"Error occurred while accessing {url}: {e}")
+def checkNotFound(notFoundMsgList, soup):
+    # Find if the notFoundMsg exists in the webpage
+    for msg in notFoundMsgList:
+      if soup.find(string=msg):
+        return True
     return False
 
 
@@ -93,7 +95,7 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DON
   #save as new file
   df.to_excel(destinationFile, index = False)
   
-
+#-----------------PSEUDO CODE--------------------------------
 #load products from file in pandas rows
 #get identifier, name, barcode, image fields
 #rename image to imageExists
@@ -121,7 +123,6 @@ websites = getWebsites(websitesPath)
 notFoundmessages = loadNotFoundMessages("./notFoundMessages/notFoundMessages.txt")
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
-for product in productsList: #search for image on websites
+for index, product in productsList.iterrows(): #search for image on websites
   for website in websites:
-    listPropertiesofProduct = [product["Name"], product["Product Code"]]
-    searchImageOnWebsite(website, listPropertiesofProduct,notFoundmessages)
+    searchImageOnWebsite(website, product,notFoundmessages)
