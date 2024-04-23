@@ -13,7 +13,7 @@ def loadProductsfromFile(productsPath): #DONE
    # Filter rows where 'IMAGEEXIST' column is not equal to 0
   filtered_df = df[df['imageExist'] == 0]
   for index, row in filtered_df.iterrows():
-    product = Product(row["Clover ID"], row["Name"], row["Product Code"], row["imageExist"])
+    product = Product(str(row["Clover ID"]), str(row["Name"]), str(row["Product Code"]), str(row["imageExist"]))
     product_list.append(product)
   return product_list
 
@@ -25,52 +25,77 @@ def loadWebsitesfromFile(websitesPath): #DONE
     websites_list.append(website)
   return websites_list
   
+def get_images(class_name, soup):
+
+  # Find all elements with the given class name
+  elements = soup.find_all(class_=class_name)
+
+  # Initialize a list to store image URLs
+  img_urls = []
+
+    # Iterate over the found elements
+  for element in elements:
+        # Find all image elements within the current element
+    imgs = element.find_all('img')
+        # Extract the 'src' attribute from each image element and add it to the list
+    img_urls.extend([img['src'] for img in imgs])
+
+  return img_urls
+  
+
+def save_image_from_url(image_url, save_path):
+    # Send a GET request to the image URL
+    response = requests.get("https://"+image_url)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Open a file in binary write mode and write the image content to it
+        with open(save_path, 'wb') as f:
+            f.write(response.content)
+        print(f"Image saved successfully at {save_path}")
+    else:
+        print(f"Failed to save image from {image_url}. Status code: {response.status_code}")
+
   
 def searchProductOnWebsite(website = Website, product = Product):
+  
   listPropertiesofProduct = [product.barcode, product.name]
   for propertie in listPropertiesofProduct:
-    webProduct  = website.url.replace("keyword", propertie)
-    # Send a GET request to the modified URL
-    response = requests.get(webProduct)
-      # Check if the request was successful
-    if response.status_code == 200:
-        # Parse the HTML content of the page using BeautifulSoup
-        soup = BeautifulSoup(response.content, 'html.parser')
-        # Implement image search logic here by finding image elements on the page
-        if not checkNotFound(website, soup):  #IMPROVE THIS CODE TOO
-            #find all images in the page
-            images = soup.find_all('img')
-            
-            #get img links
-            
-            #save 3 images with the barcode name in the Images folder
-            
-            #convert image to webp format
-            
-            #update row in the new_restaurants.xlsx file to imageExists = 1
-            product["imageExists"] = 1
-            
-            #save in the new file
-            
-            
-            # Check if any images were found
-    else:
-      # If the request was not successful, print an error message and return False
-      print("Error: Unable to retrieve data from the website.")
-      return False
-
-def checkNotFound(notFoundMsgList, soup):
-    for message in notFoundMsgList:    
-      try:
-          # Find all occurrences of the specified text
-          occurrences = soup.find_all(string=lambda t: message in str(t))    
-          # Print the found occurrences
-          if len(occurrences) == 0:
-              return False
-          else:
-              return True
-      except Exception as e:
-          print(f"Error occurred while accessing {url}: {e}")
+    if propertie != 'nan': #NaN values are not allowed
+      webProduct  = website.url.replace("keyword", propertie)
+      # Send a GET request to the modified URL
+      response = requests.get(webProduct)
+        # Check if the request was successful
+      if response.status_code == 200:
+          # Parse the HTML content of the page using BeautifulSoup
+          soup = BeautifulSoup(response.content, 'html.parser')
+          # Implement image search logic here by finding image elements on the page
+          if not checkNotFound(website.notFoundMsg, soup):  #IMPROVE THIS CODE TOO
+              #find all images in the page
+              #save 3 images with the barcode name in the Images folder
+              #convert image to webp format
+              #update row in the new_restaurants.xlsx file to imageExists = 1
+              #save in the new file
+              images = get_images(website.divClass,soup)
+              if(len(images) > 0):
+                save_image_from_url(images[0], f"./Images/{product.barcode}.webp")
+                product.imageExists = 1
+                break
+              #then update the new_items.xlsx file
+      else:
+        # If the request was not successful, print an error message and return False
+        print("Error: Unable to retrieve data from the website.")
+        return False
+def checkNotFound(notFoundMsg, soup):    
+    try:
+        # Find all occurrences of the specified text
+        occurrences = soup.find_all(string=lambda t: notFoundMsg in str(t))    
+        # Print the found occurrences
+        if len(occurrences) == 0:
+            return False
+        else:
+            return True
+    except Exception as e:
+        print(f"Error occurred while accessing website: {e}")
 
 
 def getAndSaveImage(images,imgName,imgSavePath):  #IMPROVE THIS LOGIC
@@ -103,11 +128,6 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DON
 
 
 
-
-
-
-
-
 """ --------- ONLY RUN THIS FUNCTION ONCE TO CREATE THE NEW FILE ----------
 
 sourceFile = "./Items/Kalinka.xlsx" #replace with the path to your file
@@ -119,10 +139,10 @@ createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read)
 
 
 websitesPath = "./websites/websites.xls"
-websites = loadWebsitesfromFile(websitesPath) #refactor to parse to objects products
+websitesList = loadWebsitesfromFile(websitesPath) #refactor to parse to objects products
 
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
 for product in productsList: #search for image on websites
-  for website in websites:
+  for website in websitesList:
     searchProductOnWebsite(website, product)

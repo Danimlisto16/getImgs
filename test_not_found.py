@@ -2,9 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 
 def search_text_in_page(url, text):
+    #agent to avoid 403 error
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
     try:
         # Fetch the webpage content
-        response = requests.get(url)
+        response = requests.get(url,headers=headers)
         response.raise_for_status()  # Raise an exception for bad status codes
         html_content = response.text
         
@@ -23,6 +26,6 @@ def search_text_in_page(url, text):
         print(f"Error occurred while accessing {url}: {e}")
 
 # Example usage:
-url = 'https://www.onlinetrade.ru/sitesearch.html?query=asdsads'
-text_to_search = "Найденные товары по запросу"
+url = 'https://rozetka.com.ua/search/?text=asdsadsa'
+text_to_search = "ничего не найдено :("
 print(search_text_in_page(url, text_to_search))  # Output: True
