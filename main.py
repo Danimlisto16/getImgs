@@ -3,23 +3,33 @@ import requests
 from bs4 import BeautifulSoup
 from os.path  import basename
 
+from Classes.Product import Product
+from Classes.Website import Website
+
+
 def loadProductsfromFile(productsPath): #DONE
+  product_list = []
   df = pd.read_excel(productsPath)
    # Filter rows where 'IMAGEEXIST' column is not equal to 0
   filtered_df = df[df['imageExist'] == 0]
-  return filtered_df
+  for index, row in filtered_df.iterrows():
+    product = Product(row["Clover ID"], row["Name"], row["Product Code"], row["imageExist"])
+    product_list.append(product)
+  return product_list
+
+def loadWebsitesfromFile(websitesPath): #DONE
+  websites_list = []
+  df = pd.read_excel(websitesPath)
+  for index, row in df.iterrows():
+    website = Website(row["URL"], row["NotFoundMsg"], row["CLASS"])
+    websites_list.append(website)
+  return websites_list
   
-def checkIfproductHasImage(row): #DONE
-  product = row["imageExists"]
-  if product == 1:
-    return True
-  return False
-
-
-def searchImageOnWebsite(website, product, notFoundMessages):
-  listPropertiesofProduct = [str(product["Name"]), str(product["Product Code"])]
+  
+def searchProductOnWebsite(website = Website, product = Product):
+  listPropertiesofProduct = [product.barcode, product.name]
   for propertie in listPropertiesofProduct:
-    webProduct  = website.replace("keyword", propertie)
+    webProduct  = website.url.replace("keyword", propertie)
     # Send a GET request to the modified URL
     response = requests.get(webProduct)
       # Check if the request was successful
@@ -27,10 +37,7 @@ def searchImageOnWebsite(website, product, notFoundMessages):
         # Parse the HTML content of the page using BeautifulSoup
         soup = BeautifulSoup(response.content, 'html.parser')
         # Implement image search logic here by finding image elements on the page
-        # For example, if images are wrapped in <img> tags, you can find them using:
-        #FIRST SEARCH FOR NOT FOUND MESSAGES, to continue or not with the search
-        if not checkNotFound(notFoundMessages, soup):  #IMPROVE THIS CODE TOO
-            
+        if not checkNotFound(website, soup):  #IMPROVE THIS CODE TOO
             #find all images in the page
             images = soup.find_all('img')
             
@@ -52,23 +59,18 @@ def searchImageOnWebsite(website, product, notFoundMessages):
       print("Error: Unable to retrieve data from the website.")
       return False
 
-def loadNotFoundMessages(notFoundFile_path): #DONE
-  messages = []
-  try:
-      with open(notFoundFile_path, 'r', encoding='utf-8') as f:
-          for line in f:
-              messages.append(line.strip())
-  except Exception as e:
-      print(f"Error occurred while loading not found messages from {notFoundFile_path}: {e}")
-  return messages
-
-
 def checkNotFound(notFoundMsgList, soup):
-    # Find if the notFoundMsg exists in the webpage
-    for msg in notFoundMsgList:
-      if soup.find(string=msg):
-        return True
-    return False
+    for message in notFoundMsgList:    
+      try:
+          # Find all occurrences of the specified text
+          occurrences = soup.find_all(string=lambda t: message in str(t))    
+          # Print the found occurrences
+          if len(occurrences) == 0:
+              return False
+          else:
+              return True
+      except Exception as e:
+          print(f"Error occurred while accessing {url}: {e}")
 
 
 def getAndSaveImage(images,imgName,imgSavePath):  #IMPROVE THIS LOGIC
@@ -77,14 +79,6 @@ def getAndSaveImage(images,imgName,imgSavePath):  #IMPROVE THIS LOGIC
         lnk = link.get('src')
         with open(basename(lnk), "wb") as f:
             f.write(requests.get(lnk).content)
-    
-    
-def getWebsites(websitesPath): #DONE
-  websites = []
-  with open(websitesPath) as f:
-    for line in f:
-      websites.append(line.strip())
-  return websites
 
 def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DONE
   # Replace 'file_path.xls' with the path to your Excel file
@@ -94,6 +88,8 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DON
   df['imageExist'] = 0  # Replace scalar_value with your desired value
   #save as new file
   df.to_excel(destinationFile, index = False)
+  
+  
   
 #-----------------PSEUDO CODE--------------------------------
 #load products from file in pandas rows
@@ -106,23 +102,27 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DON
 #if image is not found, save the name and barcode in a notFound.csv file
 
 
-#This function will create a new file from the old file, 
-# with CLOVER ID, NAME, PRODUCT CODE and a new column IMAGE EXIST
 
 
-columns_to_read = ["Clover ID", "Name", "Product Code"]
+
+
+
+
+""" --------- ONLY RUN THIS FUNCTION ONCE TO CREATE THE NEW FILE ----------
+
 sourceFile = "./Items/Kalinka.xlsx" #replace with the path to your file
 destinationFile = "./Items/New_Kalinka.xlsx" #replace with the path to your new file
+columns_to_read = ["Clover ID", "Name", "Product Code"]
+createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read)
+
+"""
 
 
-# --------- ONLY RUN THIS FUNCTION ONCE TO CREATE THE NEW FILE ----------
-#createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read)
+websitesPath = "./websites/websites.xls"
+websites = loadWebsitesfromFile(websitesPath) #refactor to parse to objects products
 
-websitesPath = "./websites/websites.txt"
-websites = getWebsites(websitesPath)
-notFoundmessages = loadNotFoundMessages("./notFoundMessages/notFoundMessages.txt")
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
-for index, product in productsList.iterrows(): #search for image on websites
+for product in productsList: #search for image on websites
   for website in websites:
-    searchImageOnWebsite(website, product,notFoundmessages)
+    searchProductOnWebsite(website, product)
