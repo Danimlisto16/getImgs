@@ -1,7 +1,10 @@
+import os
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from os.path  import basename
+import asyncio
+import aiohttp
 
 from Classes.Product import Product
 from Classes.Website import Website
@@ -25,28 +28,36 @@ def loadWebsitesfromFile(websitesPath): #DONE
     websites_list.append(website)
   return websites_list
   
+
 def get_images(class_name, soup):
-
-  # Find all elements with the given class name
-  elements = soup.find_all(class_=class_name)
-
-  # Initialize a list to store image URLs
-  img_urls = []
-
+    # Find all elements with the given class name
+    elements = soup.find_all(class_=class_name)
+    # Initialize a list to store image URLs
+    img_urls = []
     # Iterate over the found elements
-  for element in elements:
+    for element in elements:
         # Find all image elements within the current element
-    imgs = element.find_all('img')
+        imgs = element.find_all('img')
         # Extract the 'src' attribute from each image element and add it to the list
-    img_urls.extend([img['src'] for img in imgs])
-
-  return img_urls
+        for img in imgs:
+            img_urls.append(img['src'])
+    return img_urls
   
+  
+def checkUrl(url):
+  if "//" == url[:2]:
+    return "https:"+url
+  if "http" in url:
+    return url
+  else:
+    return "https://"+url
 
 def save_image_from_url(image_url, save_path):
     # Send a GET request to the image URL
-    response = requests.get("https://"+image_url)
+    image_url = checkUrl(image_url)
+    response =  requests.get(image_url) #WELL THE PROBLEM IS, SOMETIMES IT GETS A URL IMAGE WITH HTTPS AND OTHER TIMES WITHOU HTTP
     # Check if the request was successful
+    
     if response.status_code == 200:
         # Open a file in binary write mode and write the image content to it
         with open(save_path, 'wb') as f:
@@ -56,10 +67,11 @@ def save_image_from_url(image_url, save_path):
         print(f"Failed to save image from {image_url}. Status code: {response.status_code}")
 
   
-def searchProductOnWebsite(website = Website, product = Product):
-  
+def searchProductOnWebsite(website = Website, product = Product, image_num = int):
   listPropertiesofProduct = [product.barcode, product.name]
   for propertie in listPropertiesofProduct:
+    if product.barcode == 'nan':
+      break  
     if propertie != 'nan': #NaN values are not allowed
       webProduct  = website.url.replace("keyword", propertie)
       # Send a GET request to the modified URL
@@ -73,17 +85,21 @@ def searchProductOnWebsite(website = Website, product = Product):
               #find all images in the page
               #save 3 images with the barcode name in the Images folder
               #convert image to webp format
-              #update row in the new_restaurants.xlsx file to imageExists = 1
-              #save in the new file
+              
               images = get_images(website.divClass,soup)
+              
               if(len(images) > 0):
-                save_image_from_url(images[0], f"./Images/{product.barcode}.webp")
+                path = f"./Images/{product.barcode}"
+                if not os.path.exists(path):
+                  os.makedirs(path)
+                save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
                 product.imageExists = 1
-                break
+                #update row in the new_restaurants.xlsx file to imageExists = 1
+                #save in the new file
               #then update the new_items.xlsx file
       else:
         # If the request was not successful, print an error message and return False
-        print("Error: Unable to retrieve data from the website.")
+        print("Error: Unable to retrieve data from >> "+ website.url)
         return False
 def checkNotFound(notFoundMsg, soup):    
     try:
@@ -96,14 +112,9 @@ def checkNotFound(notFoundMsg, soup):
             return True
     except Exception as e:
         print(f"Error occurred while accessing website: {e}")
+        return True
 
 
-def getAndSaveImage(images,imgName,imgSavePath):  #IMPROVE THIS LOGIC
-  for link in images:
-    if "http" in link.get('src'):
-        lnk = link.get('src')
-        with open(basename(lnk), "wb") as f:
-            f.write(requests.get(lnk).content)
 
 def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DONE
   # Replace 'file_path.xls' with the path to your Excel file
@@ -143,6 +154,8 @@ websitesList = loadWebsitesfromFile(websitesPath) #refactor to parse to objects 
 
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
+img_num = 0
 for product in productsList: #search for image on websites
   for website in websitesList:
-    searchProductOnWebsite(website, product)
+    searchProductOnWebsite(website, product,img_num)
+    img_num += 1
