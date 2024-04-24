@@ -94,6 +94,7 @@ def searchProductOnWebsite(website = Website, product = Product, image_num = int
                   os.makedirs(path)
                 save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
                 product.imageExists = 1
+                return True
                 #update row in the new_restaurants.xlsx file to imageExists = 1
                 #save in the new file
               #then update the new_items.xlsx file
@@ -154,8 +155,22 @@ websitesList = loadWebsitesfromFile(websitesPath) #refactor to parse to objects 
 
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
-img_num = 0
+iterator = 0
+img_saved = 0
+img_not_saved = 0
 for product in productsList: #search for image on websites
   for website in websitesList:
-    searchProductOnWebsite(website, product,img_num)
-    img_num += 1
+    if searchProductOnWebsite(website, product,iterator):
+      img_saved += 1
+      break
+    else:
+      img_not_saved += 0
+    iterator += 1
+    
+    
+print("|| =========================<< REP0RT >>================================= ||")
+print(f"Images saved: {img_saved}")
+print(f"Images not saved: {img_not_saved}")
+print(f"Total images: {iterator}")
+print("|| ====================================================================== ||")
+#save the new file
