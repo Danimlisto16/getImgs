@@ -3,8 +3,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from os.path  import basename
-import asyncio
-import aiohttp
+
 
 from Classes.Product import Product
 from Classes.Website import Website
@@ -70,8 +69,6 @@ def save_image_from_url(image_url, save_path):
 def searchProductOnWebsite(website = Website, product = Product, image_num = int):
   listPropertiesofProduct = [product.barcode, product.name]
   for propertie in listPropertiesofProduct:
-    if product.barcode == 'nan':
-      break  
     if propertie != 'nan': #NaN values are not allowed
       webProduct  = website.url.replace("keyword", propertie)
       # Send a GET request to the modified URL
@@ -89,15 +86,15 @@ def searchProductOnWebsite(website = Website, product = Product, image_num = int
               images = get_images(website.divClass,soup)
               
               if(len(images) > 0):
-                path = f"./Images/{product.barcode}"
+                path = f"./Images"
                 if not os.path.exists(path):
                   os.makedirs(path)
                 save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
-                product.imageExists = 1
-                return True
-                #update row in the new_restaurants.xlsx file to imageExists = 1
-                #save in the new file
-              #then update the new_items.xlsx file
+                product.imageExists = 1 
+                #update row in the new_restaurants.xlsx file to imageExists = 1 
+                return True #save in the new file
+                
+                #then update the new_items.xlsx file
       else:
         # If the request was not successful, print an error message and return False
         print("Error: Unable to retrieve data from >> "+ website.url)
@@ -160,6 +157,8 @@ img_saved = 0
 img_not_saved = 0
 for product in productsList: #search for image on websites
   for website in websitesList:
+    if product.barcode == 'nan' or len(product.barcode) < 8:
+      break
     if searchProductOnWebsite(website, product,iterator):
       img_saved += 1
       break
