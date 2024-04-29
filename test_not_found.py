@@ -14,7 +14,7 @@ def search_text_in_page(url, text):
         # Parse the HTML content using BeautifulSoup
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Find all occurrences of the specified text
+        # Find all occurrences of the specified text not found
         occurrences = soup.find_all(string=lambda t: text in str(t))
         
         # Print the found occurrences
@@ -26,6 +26,6 @@ def search_text_in_page(url, text):
         print(f"Error occurred while accessing {url}: {e}")
 
 # Example usage:
-url = 'https://rozetka.com.ua/search/?text=asdsadsa'
-text_to_search = "ничего не найдено :("
+url = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms=banasdsadasdasdsad&search_simple=1&action=process'
+text_to_search = "No products."
 print(search_text_in_page(url, text_to_search))  # Output: True

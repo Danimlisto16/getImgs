@@ -69,36 +69,37 @@ def save_image_from_url(image_url, save_path):
 def searchProductOnWebsite(website = Website, product = Product, image_num = int):
   listPropertiesofProduct = [product.barcode, product.name]
   for propertie in listPropertiesofProduct:
-    if propertie != 'nan': #NaN values are not allowed
-      webProduct  = website.url.replace("keyword", propertie)
-      # Send a GET request to the modified URL
-      response = requests.get(webProduct)
-        # Check if the request was successful
-      if response.status_code == 200:
-          # Parse the HTML content of the page using BeautifulSoup
-          soup = BeautifulSoup(response.content, 'html.parser')
-          # Implement image search logic here by finding image elements on the page
-          if not checkNotFound(website.notFoundMsg, soup):  #IMPROVE THIS CODE TOO
-              #find all images in the page
-              #save 3 images with the barcode name in the Images folder
-              #convert image to webp format
-              
-              images = get_images(website.divClass,soup)
-              
-              if(len(images) > 0):
-                path = f"./Images"
-                if not os.path.exists(path):
-                  os.makedirs(path)
-                save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
-                product.imageExists = 1 
-                #update row in the new_restaurants.xlsx file to imageExists = 1 
-                return True #save in the new file
-                
+    webProduct  = website.url.replace("keyword", propertie)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+    # Send a GET request to the modified URL
+    response = requests.get(webProduct, headers=headers)
+      # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the HTML content of the page using BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # Implement image search logic here by finding image elements on the page
+        if not checkNotFound(website.notFoundMsg, soup):  #IMPROVE THIS CODE TOO
+            #find all images in the page
+            #save 3 images with the barcode name in the Images folder
+            #convert image to webp format
+            images = get_images(website.divClass,soup)
+            
+            if(len(images) > 0):
+              path = f"./Images"
+              if not os.path.exists(path):
+                os.makedirs(path)
+              save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
+              product.imageExists = 1 
+              #update row in the new_restaurants.xlsx file to imageExists = 1 
+              return True #save in the new file
                 #then update the new_items.xlsx file
-      else:
+    else:
         # If the request was not successful, print an error message and return False
-        print("Error: Unable to retrieve data from >> "+ website.url)
-        return False
+      print("Error: Unable to retrieve data from >> "+ website.url)
+      return False
+    
+    
 def checkNotFound(notFoundMsg, soup):    
     try:
         # Find all occurrences of the specified text
