@@ -75,34 +75,34 @@ def searchProductOnWebsite(website = Website, product = Product, image_num = int
   for propertie in listPropertiesofProduct:
     webProduct  = website.url.replace("keyword", propertie)
     # Send a GET request to the modified URL
-    response = requests.get(webProduct, headers=headers)
-      # Check if the request was successful
-    if response.status_code == 200:
-        # Parse the HTML content of the page using BeautifulSoup
-        soup = BeautifulSoup(response.content, 'html.parser')
-        # Implement image search logic here by finding image elements on the page
-        if not checkNotFound(website.notFoundMsg, soup):  #IMPROVE THIS CODE TOO
-            #find all images in the page
-            #save 3 images with the barcode name in the Images folder
-            #convert image to webp format
-            
-            images = get_images(website.divClass,soup)
-            
-            if(len(images) > 0):
-                path = f"./Images"
-                if not os.path.exists(path):
-                  os.makedirs(path)
-                save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
-                product.imageExists = 1 
-                print(f"Image saved successfully {propertie}")
-                #update row in the new_restaurants.xlsx file to imageExists = 1 
-                return True #save in the new file
-            else:
-              print(f"Image not found for {propertie}")
-              #then update the new_items.xlsx file
-    else:
+    try:   # Check if the request was successful
+      response = requests.get(webProduct, headers=headers,verify=False)
+      if response.status_code == 200:
+          # Parse the HTML content of the page using BeautifulSoup
+          soup = BeautifulSoup(response.content, 'html.parser')
+          # Implement image search logic here by finding image elements on the page
+          if not checkNotFound(website.notFoundMsg, soup):  #IMPROVE THIS CODE TOO
+              #find all images in the page
+              #save 3 images with the barcode name in the Images folder
+              #convert image to webp format
+              
+              images = get_images(website.divClass,soup)
+              
+              if(len(images) > 0):
+                  path = f"./Images"
+                  if not os.path.exists(path):
+                    os.makedirs(path)
+                  save_image_from_url(images[0],path+"/"+product.barcode+"_"+str(image_num)+".webp")
+                  product.imageExists = 1 
+                  print(f"Image saved successfully {propertie}")
+                  #update row in the new_restaurants.xlsx file to imageExists = 1 
+                  return True #save in the new file
+              else:
+                print(f"Image not found for {propertie}")
+                #then update the new_items.xlsx file
+    except Exception as e:
       # If the request was not successful, print an error message and return False
-      print("Error: Unable to retrieve data from >> "+ webProduct)
+      print("Error: Unable to retrieve data from >> "+ webProduct + " << Error: "+str(e))
       return False
       
       
@@ -142,21 +142,6 @@ def createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read): #DON
 #do this until image is found or all websites are searched
 #if image is not found, save the name and barcode in a notFound.csv file
 
-
-
-""" --------- ONLY RUN THIS FUNCTION ONCE TO CREATE THE NEW FILE ----------
-
-sourceFile = "./Items/Kalinka.xlsx" #replace with the path to your file
-destinationFile = "./Items/New_Kalinka.xlsx" #replace with the path to your new file
-columns_to_read = ["Clover ID", "Name", "Product Code"]
-createNewFileFromOldFile(sourceFile, destinationFile, columns_to_read)
-
-"""
-
-
-websitesPath = "./websites/websites.xls"
-websitesList = loadWebsitesfromFile(websitesPath) #refactor to parse to objects products
-
 productsList = loadProductsfromFile("./Items/New_Kalinka.xlsx")
 
 iterator = 0
@@ -174,20 +159,21 @@ website = Website(
   )
 
 iterator = 0
+img_saved = 0
+
 for product in productsList: #search for image on websites
   if product.barcode != 'nan' and len(product.barcode) >= 8:
     if searchProductOnWebsite(website, product,iterator):
-      img_saved += 1
-    else:
-      img_not_saved += 0
-    iterator += 1
+      img_saved += 1        
   else:
     print(f"Barcode is not valid {product.barcode}")
+  iterator += 1
+  print(f"items>>>>>>>>> {iterator}")
     
     
 print("|| =========================<< REP0RT >>================================= ||")
 print(f"Images saved: {img_saved}")
-print(f"Images not saved: {img_not_saved}")
+print(f"Images not saved: {iterator - img_saved}")
 print(f"Total images: {iterator}")
 print("|| ====================================================================== ||")
 #save the new file
